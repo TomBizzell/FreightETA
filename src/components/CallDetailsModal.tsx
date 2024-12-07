@@ -1,28 +1,78 @@
 import React, { useState } from 'react';
 import { X, Phone, MessageSquare } from 'lucide-react';
 import type { Driver } from '../types/driver';
+import CallResultModal, { CallResultModalProps } from './CallResultModal';
+import { callDriver } from '../services/callService';
 
 interface CallDetailsModalProps {
   driver: Driver;
+  originalDriver: Driver;
   companyInfo: {
     name: string;
     additionalInfo: string;
   };
   onClose: () => void;
+  onUpdateDriver: (updatedDriver: Driver) => void;
 }
 
-export function CallDetailsModal({ driver, companyInfo, onClose }: CallDetailsModalProps) {
+export function CallDetailsModal({ driver, originalDriver, companyInfo, onClose, onUpdateDriver }: CallDetailsModalProps) {
   const [callDetails, setCallDetails] = useState('');
+  const [showResult, setShowResult] = useState(false);
+  const [updatedDriver, setUpdatedDriver] = useState<Driver | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCall = () => {
-    // In a real application, this would integrate with a calling system
-    console.log('Calling driver:', {
-      driver,
-      companyInfo,
-      additionalDetails: callDetails,
-    });
-    onClose();
+  const handleCall = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const result = await callDriver(driver.id, driver);
+      console.log('API Response:', result);
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to call driver');
+      }
+      
+      const updatedDriverData = {
+        ...driver,
+        eta: result.data.updatedEta,
+      };
+      
+      console.log('Updated Driver Data:', updatedDriverData);
+      setUpdatedDriver(updatedDriverData);
+      setCallDetails(result.data.delayReason);
+      setShowResult(true);
+      onUpdateDriver(updatedDriverData);
+    } catch (err) {
+      console.error('Call Error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (showResult && updatedDriver) {
+    console.log({
+      updatedDriver,
+      originalDriver,
+      callDetails
+    });
+
+    return (
+      <CallResultModal
+        isOpen={true}
+        driver={updatedDriver}
+        originalDriver={originalDriver}
+        delayReason={callDetails || "No specific reason provided"}
+        onClose={onClose}
+        onConfirm={() => {
+          onUpdateDriver(updatedDriver);
+          onClose();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -81,10 +131,13 @@ export function CallDetailsModal({ driver, companyInfo, onClose }: CallDetailsMo
             </button>
             <button
               onClick={handleCall}
-              className="px-4 py-2 bg-neon-purple text-white rounded-md hover:bg-neon-glow transition-colors flex items-center"
+              disabled={isLoading}
+              className={`px-4 py-2 bg-neon-purple text-white rounded-md hover:bg-neon-glow transition-colors flex items-center ${
+                isLoading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              <Phone className="w-4 h-4 mr-2" />
-              Call Now
+              <Phone className={`w-4 h-4 mr-2 ${isLoading ? 'animate-pulse' : ''}`} />
+              {isLoading ? 'Calling...' : 'Call Now'}
             </button>
           </div>
         </div>

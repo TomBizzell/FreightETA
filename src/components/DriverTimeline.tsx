@@ -2,6 +2,7 @@ import React from 'react';
 import { format } from 'date-fns';
 import { Clock, AlertTriangle } from 'lucide-react';
 import type { DriverWithOverlap } from '../types/driver';
+import { safeFormatDate } from '../utils/dateUtils';
 
 interface DriverTimelineProps {
   drivers: DriverWithOverlap[];
@@ -28,7 +29,7 @@ export function DriverTimeline({ drivers, onRemoveDriver }: DriverTimelineProps)
                 <div>
                   <h3 className="font-medium">{driver.name}</h3>
                   <p className="text-sm text-gray-600">
-                    ETA: {format(driver.eta, 'MMM d, yyyy HH:mm')}
+                    ETA: {safeFormatDate(driver.eta, 'MMM d, yyyy HH:mm')}
                   </p>
                 </div>
               </div>
