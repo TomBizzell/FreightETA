@@ -3,6 +3,7 @@ import { format, differenceInMinutes } from 'date-fns';
 import type { DriverWithOverlap } from '../types/driver';
 import { calculateTimelineConfig } from '../utils/timelineUtils';
 import { UNLOAD_TIME_MINUTES } from '../utils/timeUtils';
+import { isValidDate, safeFormatDate } from '../utils/dateUtils';
 
 interface GanttChartProps {
   drivers: DriverWithOverlap[];
@@ -13,6 +14,10 @@ export function GanttChart({ drivers, title }: GanttChartProps) {
   const { startTime, endTime, totalMinutes, timeSlots } = calculateTimelineConfig(drivers);
 
   const getBarStyles = (driver: DriverWithOverlap) => {
+    if (!isValidDate(driver.eta)) {
+      return { display: 'none' };
+    }
+    
     const leftOffset = (differenceInMinutes(driver.eta, startTime) / totalMinutes) * 100;
     const width = (UNLOAD_TIME_MINUTES / totalMinutes) * 100;
 
@@ -60,7 +65,7 @@ export function GanttChart({ drivers, title }: GanttChartProps) {
               >
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-xs font-medium px-2 truncate text-white">
-                    {format(driver.eta, 'HH:mm')}
+                    {safeFormatDate(driver.eta, 'HH:mm')}
                   </span>
                 </div>
               </div>
