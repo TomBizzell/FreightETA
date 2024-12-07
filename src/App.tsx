@@ -8,6 +8,7 @@ import { ConflictModal } from './components/ConflictModal';
 import { calculateOverlaps } from './utils/timeUtils';
 import { mockDrivers } from './utils/mockData';
 import type { Driver, DriverWithOverlap } from './types/driver';
+import { TimeUnlockedCard } from './components/TimeUnlockedCard';
 
 function App() {
   const [liveDrivers, setLiveDrivers] = useState<Driver[]>(mockDrivers);
@@ -95,6 +96,14 @@ function App() {
             <h1 className="text-3xl font-bold text-gray-100">
               Driver Schedule Manager
             </h1>
+          </div>
+
+          {/* Add TimeUnlockedCard here */}
+          <div className="w-full max-w-sm mb-8">
+            <TimeUnlockedCard 
+              originalDrivers={originalDrivers}
+              liveDrivers={liveDrivers}
+            />
           </div>
 
           {/* Company Information Form */}
