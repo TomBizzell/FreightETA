@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-900;
+  }
+}
+
+@layer components {
+  .neon-border {
+    box-shadow: 0 0 5px #a855f7, inset 0 0 5px #a855f7;
+  }
+  
+  .timeline-bar {
+    transition: all 0.3s ease;
+  }
+  
+  .timeline-bar:hover {
+    transform: translateY(-2px);
+  }
+}
