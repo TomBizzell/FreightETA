@@ -31,13 +31,19 @@ export function TimeUnlockedCard({ originalDrivers, liveDrivers }: TimeUnlockedC
     <div className="bg-dark-800 p-6 rounded-lg shadow-xl neon-border">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-2">
-          <Clock className="text-2xl text-white" />
-          <h2 className="text-2xl font-bold text-white">Time Unlocked</h2>
+          <Clock className="w-5 h-5 text-neon-purple" />
+          <h2 className="text-sm font-medium text-gray-400">Time Unlocked</h2>
         </div>
-        <div className="flex items-center space-x-2">
-          <ArrowUpRight className="text-2xl text-white" />
-          <span className="text-2xl font-bold text-white">{hours}h {minutes}m</span>
+        <ArrowUpRight className="w-5 h-5 text-neon-purple animate-pulse-slow" />
+      </div>
+      
+      <div className="mt-2">
+        <div className="text-3xl font-bold text-neon-purple">
+          {hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`}
         </div>
+        <p className="text-sm text-gray-400 mt-1">
+          Total advance notice of delays
+        </p>
       </div>
     </div>
   );

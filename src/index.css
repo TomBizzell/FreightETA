@@ -1,16 +1,21 @@
+/* @tailwind base; */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-gray-900;
-  }
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-dark-900 text-gray-100;
+  margin: 0;
+  min-height: 100vh;
 }
 
 @layer components {
   .neon-border {
-    box-shadow: 0 0 5px #a855f7, inset 0 0 5px #a855f7;
+    box-shadow: 0 0 5px theme('colors.neon.purple'), inset 0 0 5px theme('colors.neon.purple');
   }
   
   .timeline-bar {
