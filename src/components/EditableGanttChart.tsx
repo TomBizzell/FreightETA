@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { format, differenceInMinutes } from 'date-fns';
 import type { Driver, DriverWithOverlap } from '../types/driver';
-import { calculateTimelineConfig } from '../utils/timelineUtils';
+import { calculateTimelineConfig, detectSwaps } from '../utils/timelineUtils';
 import { UNLOAD_TIME_MINUTES } from '../utils/timeUtils';
 import { isValidDate } from '../utils/dateUtils';
+import { ArrowLeftRight } from 'lucide-react';
+import type { SwapInfo } from '../types/swap';
 
 interface EditableGanttChartProps {
   title: string;
@@ -12,6 +14,9 @@ interface EditableGanttChartProps {
   onUpdateTime: (driverId: string, newTime: Date) => void;
   onDriverClick: (driver: DriverWithOverlap) => void;
   onUpdateOriginalTime?: (driverId: string, newTime: Date) => void;
+  onSwapsChange?: (swaps: Map<string, SwapInfo>) => void;
+  onConfirmedSwapsChange?: (confirmedSwaps: Set<string>) => void;
+  confirmedSwaps: Set<string>;
 }
 
 export function EditableGanttChart({
@@ -21,6 +26,9 @@ export function EditableGanttChart({
   onUpdateTime,
   onDriverClick,
   onUpdateOriginalTime,
+  onSwapsChange,
+  onConfirmedSwapsChange,
+  confirmedSwaps,
 }: EditableGanttChartProps) {
   const [timelineConfig, setTimelineConfig] = useState(() => 
     calculateTimelineConfig(drivers)
@@ -34,6 +42,7 @@ export function EditableGanttChart({
     timelineConfig;
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [timeline, setTimeline] = useState({ width: 0 });
+  const [hoveredSwapPair, setHoveredSwapPair] = useState<[string, string] | null>(null);
 
   // Add a ref to measure the timeline
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -51,18 +60,31 @@ export function EditableGanttChart({
     const originalDriver = originalDrivers.find(d => d.id === driver.id);
     const timeToUse = isOriginal && originalDriver ? originalDriver.eta : driver.eta;
 
-    if (!isValidDate(timeToUse)) {
+    // Return hidden style if date is invalid
+    if (!timeToUse || !isValidDate(timeToUse) || !isValidDate(startTime)) {
       return { display: 'none' };
     }
 
-    const timelineWidth = timeline.width - TIMELINE_PADDING * 2;
-    const minutesFromStart = differenceInMinutes(timeToUse, startTime);
+    // Ensure we're working with proper Date objects
+    const timeToUseDate = new Date(timeToUse);
+    const startTimeDate = new Date(startTime);
+
+    let minutesFromStart = differenceInMinutes(timeToUseDate, startTimeDate);
+    
+    // Handle cross-midnight cases
+    if (minutesFromStart < 0) {
+      minutesFromStart += 24 * 60;
+    }
+    
     const percentageFromStart = (minutesFromStart / totalMinutes) * 100;
     const barWidthPercentage = (UNLOAD_TIME_MINUTES / totalMinutes) * 100;
 
+    // Ensure the bar stays within bounds
+    const leftPosition = Math.min(Math.max(percentageFromStart, 0), 100 - barWidthPercentage);
+
     return {
       width: `${barWidthPercentage}%`,
-      left: `${percentageFromStart}%`,
+      left: `${leftPosition}%`,
       position: 'absolute' as const,
     };
   };
@@ -94,6 +116,42 @@ export function EditableGanttChart({
     }
   };
 
+  const swaps = detectSwaps(originalDrivers, drivers);
+
+  const handleConfirmSwap = (driverId: string) => {
+    const swapInfo = swaps.get(driverId);
+    if (swapInfo && onConfirmedSwapsChange) {
+      const next = new Set(confirmedSwaps);
+      // Add both drivers involved in the swap
+      next.add(driverId);
+      next.add(swapInfo.newId);
+      // Also check the reverse swap and add those drivers
+      const reverseSwap = swaps.get(swapInfo.newId);
+      if (reverseSwap) {
+        next.add(reverseSwap.originalId);
+        next.add(reverseSwap.newId);
+      }
+      onConfirmedSwapsChange(next);
+    }
+  };
+
+  const getSwapPair = (driverId: string): [string, string] | null => {
+    const swapInfo = swaps.get(driverId);
+    if (swapInfo?.newId) {
+      return [driverId, swapInfo.newId];
+    }
+    return null;
+  };
+
+  const [hoveredSwap, setHoveredSwap] = useState<[string, string] | null>(null);
+
+  useEffect(() => {
+    const detectedSwaps = detectSwaps(originalDrivers, drivers);
+    if (onSwapsChange) {
+      onSwapsChange(detectedSwaps);
+    }
+  }, [drivers, originalDrivers, onSwapsChange]);
+
   return (
     <div className="bg-dark-800 p-6 rounded-lg shadow-xl neon-border">
       <h2 className="text-xl font-semibold mb-6 text-neon-purple">{title}</h2>
@@ -118,7 +176,14 @@ export function EditableGanttChart({
         {/* Timeline Rows */}
         <div className="relative">
           {drivers.map((driver) => (
-            <div key={driver.id} className="flex mb-4">
+            <div
+              key={driver.id}
+              className={`flex mb-4 ${
+                hoveredSwapPair && (hoveredSwapPair[0] === driver.id || hoveredSwapPair[1] === driver.id)
+                ? 'bg-dark-700/50 rounded-lg transition-colors duration-150'
+                : ''
+              }`}
+            >
               <div className="w-32 flex-shrink-0 py-2">
                 <span className="text-sm font-medium text-gray-300">{driver.name}</span>
               </div>
@@ -126,10 +191,61 @@ export function EditableGanttChart({
                 onDragOver={handleDragOver}
                 ref={timelineRef}
               >
+                {/* Original position ghost bar */}
+                {!confirmedSwaps.has(driver.id) && (
+                  <>
+                    <div
+                      className="absolute top-2 h-12 rounded bg-gray-600 bg-opacity-25"
+                      style={getBarStyles(driver, true)}
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-xs font-medium px-2 truncate text-gray-400">
+                          {(() => {
+                            const originalTime = originalDrivers.find(d => d.id === driver.id)?.eta;
+                            return isValidDate(originalTime) ? format(originalTime, 'HH:mm') : 'Invalid time';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                    {!confirmedSwaps.has(driver.id) && swaps.get(driver.id)?.newId && (
+                      <div className="absolute -right-64 top-0 h-full flex flex-col justify-center">
+                        <div 
+                          className="bg-dark-700 rounded-lg p-2 border border-neon-purple w-56"
+                          onMouseEnter={() => {
+                            const swapInfo = swaps.get(driver.id);
+                            if (swapInfo?.newId) {
+                              setHoveredSwap([driver.id, swapInfo.newId]);
+                            }
+                          }}
+                          onMouseLeave={() => setHoveredSwap(null)}
+                        >
+                          <div className="text-xs text-gray-300 mb-2">
+                            Swapping:
+                            <div className="font-medium text-white">
+                              {driver.name} ↔ {drivers.find(d => d.id === swaps.get(driver.id)?.newId)?.name}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleConfirmSwap(driver.id)}
+                            className="w-full px-2 py-1 text-xs bg-neon-purple text-white rounded hover:bg-neon-glow transition-colors"
+                          >
+                            Confirm Swap
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Timeline bar with swap styling */}
                 <div
                   draggable
                   onDragStart={(e) => handleDragStart(e, driver.id)}
                   className={`absolute top-2 h-12 rounded cursor-move ${
+                    swaps.get(driver.id)?.newId 
+                      ? 'border-2 border-neon-purple'
+                      : ''
+                  } ${
                     'overlapsWith' in driver && driver.overlapsWith.length > 0
                       ? 'bg-amber-500 bg-opacity-75'
                       : 'bg-neon-purple bg-opacity-75'
@@ -138,10 +254,22 @@ export function EditableGanttChart({
                 >
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-xs font-medium px-2 truncate text-white">
-                      {format(driver.eta, 'HH:mm')}
+                      {isValidDate(driver.eta) ? format(driver.eta, 'HH:mm') : 'Invalid time'}
                     </span>
                   </div>
                 </div>
+
+                {/* Single Swap Indicator */}
+                {!confirmedSwaps.has(driver.id) && swaps.get(driver.id)?.newId && (
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10">
+                    <div className="flex items-center space-x-1 bg-dark-600/50 rounded-full px-2 py-1 border border-neon-purple/30">
+                      <div className="w-2 h-2 bg-neon-purple rounded-full"></div>
+                      <span className="text-xs text-gray-300">
+                        Swapping with {drivers.find(d => d.id === swaps.get(driver.id)?.newId)?.name}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
