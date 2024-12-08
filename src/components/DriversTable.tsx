@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Plus, Trash2, Phone } from 'lucide-react';
 import type { Driver } from '../types/driver';
+import type { SwapInfo } from '../types/swap';
 import { CallDetailsModal } from './CallDetailsModal';
 import { formatUnlockedTime, calculateDriverUnlockedTime } from '../utils/timeUtils';
 import CallResultModal from './CallResultModal';
@@ -16,6 +17,8 @@ interface DriversTableProps {
     name: string;
     additionalInfo: string;
   };
+  swaps: Map<string, SwapInfo>;
+  confirmedSwaps: Set<string>;
 }
 
 // Helper function to safely format dates
@@ -30,6 +33,27 @@ const isValidDate = (date: Date | null | undefined): date is Date => {
   return date instanceof Date && !isNaN(date.getTime());
 };
 
+const getDriverStatus = (driver: Driver, originalDrivers: Driver[], swaps: Map<string, SwapInfo>, confirmedSwaps: Set<string>) => {
+  const originalDriver = originalDrivers.find(d => d.id === driver.id);
+  
+  if (!isValidDate(driver.eta) || !originalDriver || !isValidDate(originalDriver.eta)) {
+    return 'active';
+  }
+
+  const hasSwap = swaps.has(driver.id);
+  const isConfirmed = confirmedSwaps.has(driver.id);
+
+  if (hasSwap && !isConfirmed) {
+    return 'pending';
+  }
+
+  if (driver.eta.getTime() !== originalDriver.eta.getTime()) {
+    return 'checked-in';
+  }
+
+  return 'active';
+};
+
 export function DriversTable({
   title,
   drivers,
@@ -37,6 +61,8 @@ export function DriversTable({
   onAddDriver,
   onRemoveDriver,
   companyInfo,
+  swaps,
+  confirmedSwaps,
 }: DriversTableProps) {
   const [newDriver, setNewDriver] = useState({
     name: '',
@@ -97,21 +123,17 @@ export function DriversTable({
   };
 
   // Split drivers into two categories
-  const activeDrivers = drivers.filter(driver => {
-    const originalDriver = originalDrivers.find(d => d.id === driver.id);
-    if (!isValidDate(driver.eta) || !originalDriver || !isValidDate(originalDriver.eta)) {
-      return true; // Show invalid dates in active section
-    }
-    return driver.eta.getTime() === originalDriver.eta.getTime();
-  });
+  const activeDrivers = drivers.filter(driver => 
+    getDriverStatus(driver, originalDrivers, swaps, confirmedSwaps) === 'active'
+  );
 
-  const checkedInDrivers = drivers.filter(driver => {
-    const originalDriver = originalDrivers.find(d => d.id === driver.id);
-    if (!isValidDate(driver.eta) || !originalDriver || !isValidDate(originalDriver.eta)) {
-      return false; // Don't show invalid dates in checked-in section
-    }
-    return driver.eta.getTime() !== originalDriver.eta.getTime();
-  });
+  const pendingDrivers = drivers.filter(driver => 
+    getDriverStatus(driver, originalDrivers, swaps, confirmedSwaps) === 'pending'
+  );
+
+  const checkedInDrivers = drivers.filter(driver => 
+    getDriverStatus(driver, originalDrivers, swaps, confirmedSwaps) === 'checked-in'
+  );
 
   return (
     <div className="bg-dark-800 p-6 rounded-lg shadow-xl neon-border overflow-x-auto space-y-8">
@@ -228,6 +250,60 @@ export function DriversTable({
           </tbody>
         </table>
       </div>
+
+      {/* Pending Swaps */}
+      {pendingDrivers.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4 text-neon-purple">Pending Swaps</h2>
+          <table className="min-w-full divide-y divide-gray-700 opacity-75">
+            <thead className="bg-dark-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Driver Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Phone Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Updated ETA
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Original ETA
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-700">
+              {pendingDrivers.map((driver) => {
+                const originalDriver = originalDrivers.find(d => d.id === driver.id);
+                return (
+                  <tr key={driver.id} className="hover:bg-dark-700 transition-colors text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap">{driver.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{driver.phone}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-green-400">
+                      {safeFormatDate(driver.eta)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {originalDriver && safeFormatDate(originalDriver.eta)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => onRemoveDriver(driver.id)}
+                        className="text-red-400 hover:text-red-300 transition-colors"
+                        title="Remove Driver"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Checked-in Drivers Section */}
       {checkedInDrivers.length > 0 && (

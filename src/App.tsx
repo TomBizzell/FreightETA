@@ -7,11 +7,15 @@ import { DriversTable } from './components/DriversTable';
 import { EditableGanttChart } from './components/EditableGanttChart';
 import { BulkCallModal } from './components/BulkCallModal';
 import type { Driver, DriverWithOverlap } from './types/driver';
+import type { SwapInfo } from './types/swap';
 
 function App() {
   const [liveDrivers, setLiveDrivers] = useState<Driver[]>(mockDrivers);
   const [originalDrivers, _setOriginalDrivers] = useState<Driver[]>(mockDrivers);
   const [showBulkCallModal, setShowBulkCallModal] = useState(false);
+  const [swaps, setSwaps] = useState<Map<string, SwapInfo>>(new Map());
+  const [confirmedSwaps, setConfirmedSwaps] = useState<Set<string>>(new Set());
+  const [hoveredSwap, setHoveredSwap] = useState<[string, string] | null>(null);
   const companyInfo = {
     name: '',
     additionalInfo: ''
@@ -68,6 +72,16 @@ function App() {
     });
   };
 
+  const handleConfirmSwap = (driverId: string) => {
+    const swapInfo = swaps.get(driverId);
+    if (swapInfo) {
+      const next = new Set(confirmedSwaps);
+      next.add(driverId);
+      next.add(swapInfo.newId);
+      setConfirmedSwaps(next);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-dark-900 text-gray-100">
       <div className="max-w-7xl mx-auto py-8 px-4">
@@ -104,6 +118,8 @@ function App() {
               onAddDriver={onAddDriver}
               onRemoveDriver={onRemoveDriver}
               companyInfo={companyInfo}
+              swaps={swaps}
+              confirmedSwaps={confirmedSwaps}
             />
 
             <EditableGanttChart 
@@ -112,8 +128,11 @@ function App() {
               title="Schedule Timeline"
               onUpdateTime={onUpdateDriverTime}
               onUpdateOriginalTime={onUpdateOriginalTime}
+              onSwapsChange={setSwaps}
+              onConfirmedSwapsChange={setConfirmedSwaps}
+              confirmedSwaps={confirmedSwaps}
               onDriverClick={(driver) => {
-                console.log('Driver clicked:', driver);
+                // Add your click handler here
               }}
             />
           </div>

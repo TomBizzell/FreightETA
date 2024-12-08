@@ -43,11 +43,25 @@ export async function callDriver(driverId: string, driver: Driver): Promise<{
       throw new Error('Invalid API response format');
     }
 
-    // Convert "2200" format to today's date with that time
-    const today = new Date();
+    // Convert "2200" format to a proper date/time
+    const originalDate = driver.eta;
     const hours = parseInt(relevanceData.output.ETA.slice(0, 2));
     const minutes = parseInt(relevanceData.output.ETA.slice(2));
-    const newEta = new Date(today.setHours(hours, minutes, 0, 0));
+
+    // Create new date based on original date
+    const newEta = new Date(originalDate);
+    newEta.setHours(hours, minutes, 0, 0);
+
+    // If the new time is more than 12 hours before the original time,
+    // assume it's for the next day
+    if (newEta.getTime() - originalDate.getTime() < -12 * 60 * 60 * 1000) {
+      newEta.setDate(newEta.getDate() + 1);
+    }
+    // If the new time is more than 12 hours after the original time,
+    // assume it's for the previous day
+    else if (newEta.getTime() - originalDate.getTime() > 12 * 60 * 60 * 1000) {
+      newEta.setDate(newEta.getDate() - 1);
+    }
 
     return {
       success: true,
