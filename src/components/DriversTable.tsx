@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Plus, Trash2, Phone } from 'lucide-react';
+import { Plus, Trash2, Phone, Check, AlertTriangle, Clock } from 'lucide-react';
 import type { Driver } from '../types/driver';
 import type { SwapInfo } from '../types/swap';
 import { CallDetailsModal } from './CallDetailsModal';
 import { formatUnlockedTime, calculateDriverUnlockedTime } from '../utils/timeUtils';
 import CallResultModal from './CallResultModal';
+import { differenceInMinutes } from 'date-fns';
 
 interface DriversTableProps {
   title: string;
@@ -19,6 +20,7 @@ interface DriversTableProps {
   };
   swaps: Map<string, SwapInfo>;
   confirmedSwaps: Set<string>;
+  onConfirmUpdate: (driverId: string) => void;
 }
 
 // Helper function to safely format dates
@@ -41,17 +43,37 @@ const getDriverStatus = (driver: Driver, originalDrivers: Driver[], swaps: Map<s
   }
 
   const hasSwap = swaps.has(driver.id);
+  const hasUpdate = driver.eta.getTime() !== originalDriver.eta.getTime();
   const isConfirmed = confirmedSwaps.has(driver.id);
 
-  if (hasSwap && !isConfirmed) {
+  if ((hasSwap || hasUpdate) && !isConfirmed) {
     return 'pending';
   }
 
-  if (driver.eta.getTime() !== originalDriver.eta.getTime()) {
+  if (isConfirmed) {
     return 'checked-in';
   }
 
   return 'active';
+};
+
+const getDelayInfo = (originalEta: Date, updatedEta: Date): { message: string; type: 'early' | 'delayed' | 'ontime' } => {
+  const diffMinutes = differenceInMinutes(updatedEta, originalEta);
+  if (diffMinutes > 0) {
+    return {
+      message: `Delayed by ${diffMinutes} minutes`,
+      type: 'delayed'
+    };
+  } else if (diffMinutes < 0) {
+    return {
+      message: `Early by ${Math.abs(diffMinutes)} minutes`,
+      type: 'early'
+    };
+  }
+  return {
+    message: 'On time',
+    type: 'ontime'
+  };
 };
 
 export function DriversTable({
@@ -63,6 +85,7 @@ export function DriversTable({
   companyInfo,
   swaps,
   confirmedSwaps,
+  onConfirmUpdate,
 }: DriversTableProps) {
   const [newDriver, setNewDriver] = useState({
     name: '',
@@ -134,6 +157,10 @@ export function DriversTable({
   const checkedInDrivers = drivers.filter(driver => 
     getDriverStatus(driver, originalDrivers, swaps, confirmedSwaps) === 'checked-in'
   );
+
+  const handleConfirmUpdate = (driverId: string) => {
+    // Implement the logic to confirm the update
+  };
 
   return (
     <div className="bg-dark-800 p-6 rounded-lg shadow-xl neon-border overflow-x-auto space-y-8">
@@ -251,10 +278,10 @@ export function DriversTable({
         </table>
       </div>
 
-      {/* Pending Swaps */}
+      {/* Pending Updates */}
       {pendingDrivers.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold mb-4 text-neon-purple">Pending Swaps</h2>
+          <h2 className="text-xl font-semibold mb-4 text-neon-purple">Pending Updates</h2>
           <table className="min-w-full divide-y divide-gray-700 opacity-75">
             <thead className="bg-dark-700">
               <tr>
@@ -265,10 +292,13 @@ export function DriversTable({
                   Phone Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Original ETA
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Updated ETA
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  Original ETA
+                  Type
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Actions
@@ -278,24 +308,64 @@ export function DriversTable({
             <tbody className="divide-y divide-gray-700">
               {pendingDrivers.map((driver) => {
                 const originalDriver = originalDrivers.find(d => d.id === driver.id);
+                const hasSwap = swaps.has(driver.id);
+                const swapInfo = swaps.get(driver.id);
+                
                 return (
                   <tr key={driver.id} className="hover:bg-dark-700 transition-colors text-gray-400">
                     <td className="px-6 py-4 whitespace-nowrap">{driver.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{driver.phone}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {originalDriver && safeFormatDate(originalDriver.eta)}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-green-400">
                       {safeFormatDate(driver.eta)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {originalDriver && safeFormatDate(originalDriver.eta)}
+                      <div className="flex items-center space-x-2">
+                        <span className="text-amber-400">Time Update</span>
+                        <div className="relative group">
+                          {originalDriver && (() => {
+                            const delayInfo = getDelayInfo(originalDriver.eta, driver.eta);
+                            return (
+                              <>
+                                {delayInfo.type === 'delayed' ? (
+                                  <AlertTriangle className="w-4 h-4 text-amber-400 cursor-help" />
+                                ) : (
+                                  <Clock className="w-4 h-4 text-emerald-400 cursor-help" />
+                                )}
+                                <div className="absolute hidden group-hover:block z-10 w-48 p-2 mt-2 text-sm bg-dark-700 rounded-lg shadow-xl -left-1/2 transform -translate-x-1/4">
+                                  <span className={
+                                    delayInfo.type === 'delayed' ? 'text-amber-400' : 
+                                    delayInfo.type === 'early' ? 'text-emerald-400' : 
+                                    'text-gray-400'
+                                  }>
+                                    {delayInfo.message}
+                                  </span>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => onRemoveDriver(driver.id)}
-                        className="text-red-400 hover:text-red-300 transition-colors"
-                        title="Remove Driver"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => onConfirmUpdate(driver.id)}
+                          className="text-green-400 hover:text-green-300 transition-colors"
+                          title="Confirm Update"
+                        >
+                          <Check className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => onRemoveDriver(driver.id)}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                          title="Remove Driver"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -323,6 +393,9 @@ export function DriversTable({
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Original ETA
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Type
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Actions

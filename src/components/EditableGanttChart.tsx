@@ -6,6 +6,7 @@ import { UNLOAD_TIME_MINUTES } from '../utils/timeUtils';
 import { isValidDate } from '../utils/dateUtils';
 import { ArrowLeftRight } from 'lucide-react';
 import type { SwapInfo } from '../types/swap';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface EditableGanttChartProps {
   title: string;
@@ -17,6 +18,8 @@ interface EditableGanttChartProps {
   onSwapsChange?: (swaps: Map<string, SwapInfo>) => void;
   onConfirmedSwapsChange?: (confirmedSwaps: Set<string>) => void;
   confirmedSwaps: Set<string>;
+  currentDate: Date;
+  onDateChange: (date: Date) => void;
 }
 
 export function EditableGanttChart({
@@ -29,6 +32,8 @@ export function EditableGanttChart({
   onSwapsChange,
   onConfirmedSwapsChange,
   confirmedSwaps,
+  currentDate,
+  onDateChange,
 }: EditableGanttChartProps) {
   const [timelineConfig, setTimelineConfig] = useState(() => 
     calculateTimelineConfig(drivers)
@@ -154,7 +159,34 @@ export function EditableGanttChart({
 
   return (
     <div className="bg-dark-800 p-6 rounded-lg shadow-xl neon-border">
-      <h2 className="text-xl font-semibold mb-6 text-neon-purple">{title}</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-neon-purple">{title}</h2>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => {
+              const newDate = new Date(currentDate);
+              newDate.setDate(newDate.getDate() - 1);
+              onDateChange(newDate);
+            }}
+            className="p-2 rounded hover:bg-gray-700 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-400" />
+          </button>
+          <span className="text-gray-300 font-medium">
+            {format(currentDate, 'MMM d, yyyy')}
+          </span>
+          <button
+            onClick={() => {
+              const newDate = new Date(currentDate);
+              newDate.setDate(newDate.getDate() + 1);
+              onDateChange(newDate);
+            }}
+            className="p-2 rounded hover:bg-gray-700 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+      </div>
       
       <div className="relative overflow-x-auto">
         {/* Timeline Header */}

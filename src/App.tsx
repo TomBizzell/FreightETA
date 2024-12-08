@@ -16,6 +16,7 @@ function App() {
   const [swaps, setSwaps] = useState<Map<string, SwapInfo>>(new Map());
   const [confirmedSwaps, setConfirmedSwaps] = useState<Set<string>>(new Set());
   const [hoveredSwap, setHoveredSwap] = useState<[string, string] | null>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
   const companyInfo = {
     name: '',
     additionalInfo: ''
@@ -82,6 +83,12 @@ function App() {
     }
   };
 
+  const handleConfirmUpdate = (driverId: string) => {
+    const next = new Set(confirmedSwaps);
+    next.add(driverId);
+    setConfirmedSwaps(next);
+  };
+
   return (
     <div className="min-h-screen bg-dark-900 text-gray-100">
       <div className="max-w-7xl mx-auto py-8 px-4">
@@ -120,6 +127,7 @@ function App() {
               companyInfo={companyInfo}
               swaps={swaps}
               confirmedSwaps={confirmedSwaps}
+              onConfirmUpdate={handleConfirmUpdate}
             />
 
             <EditableGanttChart 
@@ -134,6 +142,8 @@ function App() {
               onDriverClick={(driver) => {
                 // Add your click handler here
               }}
+              currentDate={currentDate}
+              onDateChange={setCurrentDate}
             />
           </div>
         </div>

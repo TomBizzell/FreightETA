@@ -1,17 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { format, differenceInMinutes } from 'date-fns';
 import type { DriverWithOverlap } from '../types/driver';
 import { calculateTimelineConfig } from '../utils/timelineUtils';
 import { UNLOAD_TIME_MINUTES } from '../utils/timeUtils';
 import { isValidDate, safeFormatDate } from '../utils/dateUtils';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface GanttChartProps {
   drivers: DriverWithOverlap[];
   title: string;
+  currentDate: Date;
+  onDateChange: (newDate: Date) => void;
 }
 
-export function GanttChart({ drivers, title }: GanttChartProps) {
+export function GanttChart({ drivers, title, currentDate, onDateChange }: GanttChartProps) {
   const { startTime, endTime, totalMinutes, timeSlots } = calculateTimelineConfig(drivers);
+
+  const handlePreviousDay = () => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() - 1);
+    onDateChange(newDate);
+  };
+
+  const handleNextDay = () => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + 1);
+    onDateChange(newDate);
+  };
 
   const getBarStyles = (driver: DriverWithOverlap) => {
     if (!isValidDate(driver.eta)) {
@@ -29,7 +44,27 @@ export function GanttChart({ drivers, title }: GanttChartProps) {
 
   return (
     <div className="bg-dark-800 p-6 rounded-lg shadow-xl neon-border">
-      <h2 className="text-xl font-semibold mb-6 text-neon-purple">{title}</h2>
+      {/* Date Navigation */}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-neon-purple">{title}</h2>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={handlePreviousDay}
+            className="p-2 rounded hover:bg-gray-700 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-400" />
+          </button>
+          <span className="text-gray-300 font-medium">
+            {format(currentDate, 'MMM d, yyyy')}
+          </span>
+          <button
+            onClick={handleNextDay}
+            className="p-2 rounded hover:bg-gray-700 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+      </div>
       
       {/* Timeline Header */}
       <div className="relative mb-4 border-b border-gray-700">
