@@ -3,6 +3,8 @@ export interface Driver {
   name: string;
   eta: Date;
   phone: string;
+  destination: string;
+  overlapsWith?: string[];
 }
 
 export interface DriverWithOverlap extends Driver {

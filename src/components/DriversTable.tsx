@@ -91,6 +91,7 @@ export function DriversTable({
     name: '',
     phone: '',
     eta: '',
+    destination: '',
   });
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [callResult, setCallResult] = useState<any>(null);
@@ -105,8 +106,9 @@ export function DriversTable({
         name: newDriver.name,
         phone: newDriver.phone,
         eta: new Date(newDriver.eta),
+        destination: newDriver.destination,
       });
-      setNewDriver({ name: '', phone: '', eta: '' });
+      setNewDriver({ name: '', phone: '', eta: '', destination: '' });
     }
   };
 
@@ -177,6 +179,9 @@ export function DriversTable({
                 Phone Number
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                Destination
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                 Estimated Time of Arrival
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
@@ -198,6 +203,7 @@ export function DriversTable({
                 <tr key={driver.id} className="hover:bg-dark-700 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">{driver.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{driver.phone}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{driver.destination}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {safeFormatDate(driver.eta)}
                   </td>
@@ -262,6 +268,16 @@ export function DriversTable({
                       setNewDriver((prev) => ({ ...prev, eta: e.target.value }))
                     }
                     className="flex-1 rounded-md bg-dark-600 border-gray-600 text-gray-100 focus:border-neon-purple focus:ring-neon-purple"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Destination"
+                    value={newDriver.destination}
+                    onChange={(e) =>
+                      setNewDriver((prev) => ({ ...prev, destination: e.target.value }))
+                    }
+                    className="flex-1 rounded-md bg-dark-600 border-gray-600 text-gray-100 placeholder-gray-400 focus:border-neon-purple focus:ring-neon-purple"
                     required
                   />
                   <button

@@ -283,7 +283,10 @@ export function EditableGanttChart({
                           <div className="text-xs text-gray-300 mb-2">
                             Swapping:
                             <div className="font-medium text-white">
-                              {driver.name} �� {drivers.find(d => d.id === swaps.get(driver.id)?.newId)?.name}
+                              {driver.name} → {drivers.find(d => d.id === swaps.get(driver.id)?.newId)?.name}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              Both going to: {driver.destination}
                             </div>
                           </div>
                           <button

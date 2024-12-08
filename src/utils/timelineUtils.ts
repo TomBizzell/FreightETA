@@ -92,11 +92,12 @@ export function detectSwaps(originalDrivers: Driver[], currentDrivers: Driver[])
 
     // If current time is different from original time
     if (currentDriver.eta.getTime() !== originalDriver.eta.getTime()) {
-      // Find another driver who has this driver's original time
+      // Find another driver who has this driver's original time AND same destination
       const swappedWith = currentDrivers.find(
         d => d.id !== currentDriver.id && 
             d.eta && 
-            Math.abs(d.eta.getTime() - originalDriver.eta.getTime()) < 60000 // within 1 minute
+            d.destination === currentDriver.destination &&
+            Math.abs(d.eta.getTime() - originalDriver.eta.getTime()) < 60000
       );
       
       if (swappedWith) {
