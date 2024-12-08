@@ -395,7 +395,7 @@ export function DriversTable({
                   Original ETA
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  Type
+                  Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Actions
@@ -403,30 +403,30 @@ export function DriversTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {checkedInDrivers.map((driver) => {
-                const originalDriver = originalDrivers.find(d => d.id === driver.id);
-                return (
-                  <tr key={driver.id} className="hover:bg-dark-700 transition-colors text-gray-400">
-                    <td className="px-6 py-4 whitespace-nowrap">{driver.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{driver.phone}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-green-400">
-                      {safeFormatDate(driver.eta)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {originalDriver && safeFormatDate(originalDriver.eta)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => onRemoveDriver(driver.id)}
-                        className="text-red-400 hover:text-red-300 transition-colors"
-                        title="Remove Driver"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+              {checkedInDrivers.map((driver) => (
+                <tr key={driver.id} className="hover:bg-dark-700 transition-colors text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap">{driver.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{driver.phone}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-emerald-400">
+                    {safeFormatDate(driver.eta)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {originalDrivers.find(d => d.id === driver.id)?.eta && 
+                     safeFormatDate(originalDrivers.find(d => d.id === driver.id)!.eta)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-emerald-400">Checked-in</span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => onRemoveDriver(driver.id)}
+                      className="text-red-500 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

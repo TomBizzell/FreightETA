@@ -157,6 +157,22 @@ export function EditableGanttChart({
     }
   }, [drivers, originalDrivers, onSwapsChange]);
 
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const getCurrentTimePosition = () => {
+    const minutesFromStart = differenceInMinutes(new Date(), startTime);
+    const position = (minutesFromStart / totalMinutes) * 100;
+    return `${position}%`;
+  };
+
   return (
     <div className="bg-dark-800 p-6 rounded-lg shadow-xl neon-border">
       <div className="flex justify-between items-center mb-6">
@@ -190,18 +206,31 @@ export function EditableGanttChart({
       
       <div className="relative overflow-x-auto">
         {/* Timeline Header */}
-        <div className="sticky top-0 bg-dark-800 z-10 mb-4 border-b border-gray-700">
+        <div className="sticky top-0 bg-dark-800 z-10 mb-4">
           <div className="flex">
-            <div className="w-32 flex-shrink-0" /> {/* Name column space */}
-            <div className="flex-1 flex justify-between px-8">
-              {timeSlots.map((slot, index) => (
-                <div key={index} className="text-center">
-                  <span className="text-sm text-gray-400">
-                    {format(slot, 'HH:mm')}
-                  </span>
-                </div>
-              ))}
+            <div className="w-32 flex-shrink-0" />
+            <div className="flex-1 relative h-8">
+              <div className="flex justify-between absolute inset-0">
+                {timeSlots.map((slot, index) => (
+                  <div key={index} className="flex flex-col items-center">
+                    <span className="text-sm font-medium text-gray-200 mb-1">
+                      {format(slot, 'HH:mm')}
+                    </span>
+                    <div className="h-2 w-0.5 bg-gray-700" />
+                  </div>
+                ))}
+              </div>
             </div>
+          </div>
+        </div>
+
+        {/* Current time indicator */}
+        <div 
+          className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30"
+          style={{ left: getCurrentTimePosition() }}
+        >
+          <div className="absolute -top-6 -translate-x-1/2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded">
+            {format(new Date(), 'HH:mm')}
           </div>
         </div>
 
@@ -254,7 +283,7 @@ export function EditableGanttChart({
                           <div className="text-xs text-gray-300 mb-2">
                             Swapping:
                             <div className="font-medium text-white">
-                              {driver.name} ↔ {drivers.find(d => d.id === swaps.get(driver.id)?.newId)?.name}
+                              {driver.name} �� {drivers.find(d => d.id === swaps.get(driver.id)?.newId)?.name}
                             </div>
                           </div>
                           <button
