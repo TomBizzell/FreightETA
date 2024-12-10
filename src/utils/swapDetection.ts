@@ -1,3 +1,13 @@
+import { useState, useCallback } from 'react';
+import { differenceInMinutes } from 'date-fns';
+import { Driver } from '../types/driver';
+
+interface SwapInfo {
+  originalId: string;
+  newId: string;
+  type: 'swap';
+}
+
 export function detectSwaps(originalDrivers: Driver[], currentDrivers: Driver[]): Map<string, SwapInfo> {
   const swaps = new Map<string, SwapInfo>();
   
